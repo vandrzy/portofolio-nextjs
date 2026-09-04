@@ -26,3 +26,10 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-poppins), sans-serif;
   color: #202224;
 }
+
+/* Hide default browser password reveal button (Edge/IE) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
