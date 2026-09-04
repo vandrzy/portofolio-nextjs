@@ -61,22 +61,10 @@ export default function ProjekPage() {
         {projects.map((project) => (
           <div
             key={project.id}
-            className="group rounded-3xl bg-white border border-gray-100 overflow-hidden hover:border-[#026c99]/30 transition-all hover:shadow-lg flex flex-col justify-between"
+            className="group rounded-3xl bg-white border border-gray-100 p-6 md:p-8 hover:border-[#026c99]/30 transition-all hover:shadow-lg flex flex-col justify-between h-full"
           >
-            {/* Card Preview Banner / Accent */}
-            <div className="h-44 bg-gradient-to-br from-[#026c99]/15 via-[#026c99]/5 to-gray-50 border-b border-gray-100 p-6 flex flex-col justify-between group-hover:from-[#026c99]/20 transition-colors">
-              <div className="flex justify-between items-start">
-                <span className="px-3 py-1 rounded-full bg-white/90 backdrop-blur-xs text-[#026c99] text-xs font-semibold font-poppins shadow-2xs">
-                  {project.category}
-                </span>
-              </div>
-              <div className="text-[#026c99] font-poppins font-bold text-2xl tracking-wide opacity-80 group-hover:opacity-100 transition-opacity">
-                {project.title.split(" ")[0]} App
-              </div>
-            </div>
-
             {/* Card Content */}
-            <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
+            <div className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="space-y-2">
                 <h2 className="font-poppins font-bold text-xl text-[#202224] group-hover:text-[#026c99] transition-colors">
                   {project.title}
@@ -86,7 +74,7 @@ export default function ProjekPage() {
                 </p>
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-gray-100">
+              <div className="space-y-4 pt-4 border-t border-gray-100 mt-auto">
                 {/* Tech Tags */}
                 <div className="flex flex-wrap gap-2">
                   {project.tags.map((tag) => (
@@ -100,18 +88,12 @@ export default function ProjekPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center space-x-4 pt-2">
+                <div className="pt-1">
                   <a
                     href={project.demoUrl}
-                    className="px-4 py-2 rounded-lg bg-[#026c99] hover:bg-[#02577c] text-white font-poppins font-medium text-xs transition-all shadow-2xs"
+                    className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#026c99] hover:bg-[#02577c] text-white font-poppins font-medium text-xs transition-all shadow-2xs"
                   >
-                    Demo Langsung
-                  </a>
-                  <a
-                    href={project.githubUrl}
-                    className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-[#202224] font-poppins font-medium text-xs transition-all"
-                  >
-                    Source Code
+                    Lihat
                   </a>
                 </div>
               </div>
