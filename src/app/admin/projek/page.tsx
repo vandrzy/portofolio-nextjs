@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Pagination from "@/components/admin/Pagination";
+import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 
 interface Project {
   id: string;
@@ -25,6 +26,7 @@ export default function AdminProjekPage() {
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const itemsPerPage = 5;
 
   // Filter data based on search term (search by judul)
@@ -44,9 +46,14 @@ export default function AdminProjekPage() {
     setCurrentPage(1); // reset to page 1 on search
   };
 
-  const handleDelete = (id: string, judul: string) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus projek "${judul}"?`)) {
-      setProjects((prev) => prev.filter((item) => item.id !== id));
+  const handleOpenDeleteModal = (item: Project) => {
+    setDeleteTarget(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteTarget) {
+      setProjects((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      setDeleteTarget(null);
     }
   };
 
@@ -138,7 +145,7 @@ export default function AdminProjekPage() {
                         </Link>
                         {/* Hapus Button */}
                         <button
-                          onClick={() => handleDelete(item.id, item.judul)}
+                          onClick={() => handleOpenDeleteModal(item)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-xs font-medium text-red-600 hover:bg-red-100 transition-all cursor-pointer"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,6 +177,14 @@ export default function AdminProjekPage() {
           onPageChange={(page) => setCurrentPage(page)}
         />
       </div>
+
+      {/* Modal Konfirmasi Hapus */}
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        itemName={deleteTarget?.judul}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

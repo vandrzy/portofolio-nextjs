@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Pagination from "@/components/admin/Pagination";
+import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 
 interface Technology {
   id: string;
@@ -26,6 +27,7 @@ export default function AdminTeknologiPage() {
   const [technologies, setTechnologies] = useState<Technology[]>(INITIAL_TECHNOLOGIES);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<Technology | null>(null);
   const itemsPerPage = 5;
 
   // Filter data based on search term (search by nama)
@@ -45,19 +47,14 @@ export default function AdminTeknologiPage() {
     setCurrentPage(1); // reset to page 1 on search
   };
 
-  const handleAdd = () => {
-    // UI placeholder action - Ready for modal or API call integration
-    alert("Buka Form / Modal Tambah Teknologi");
+  const handleOpenDeleteModal = (item: Technology) => {
+    setDeleteTarget(item);
   };
 
-  const handleEdit = (item: Technology) => {
-    // UI placeholder action - Ready for modal or API call integration
-    alert(`Edit Teknologi: ${item.nama}`);
-  };
-
-  const handleDelete = (id: string, nama: string) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus teknologi "${nama}"?`)) {
-      setTechnologies((prev) => prev.filter((item) => item.id !== id));
+  const handleConfirmDelete = () => {
+    if (deleteTarget) {
+      setTechnologies((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      setDeleteTarget(null);
     }
   };
 
@@ -149,7 +146,7 @@ export default function AdminTeknologiPage() {
                         </Link>
                         {/* Hapus Button */}
                         <button
-                          onClick={() => handleDelete(item.id, item.nama)}
+                          onClick={() => handleOpenDeleteModal(item)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-xs font-medium text-red-600 hover:bg-red-100 transition-all cursor-pointer"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,6 +178,14 @@ export default function AdminTeknologiPage() {
           onPageChange={(page) => setCurrentPage(page)}
         />
       </div>
+
+      {/* Modal Konfirmasi Hapus */}
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        itemName={deleteTarget?.nama}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
