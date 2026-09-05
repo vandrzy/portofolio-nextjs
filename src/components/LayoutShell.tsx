@@ -11,9 +11,10 @@ export default function LayoutShell({
 }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+  const isAdminPage = pathname.startsWith("/admin");
 
-  if (isLoginPage) {
-    return <main className="flex-1 flex flex-col justify-center">{children}</main>;
+  if (isLoginPage || isAdminPage) {
+    return <main className="flex-1 flex flex-col">{children}</main>;
   }
 
   return (
