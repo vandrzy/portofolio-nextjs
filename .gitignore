@@ -42,3 +42,6 @@ next-env.d.ts
 
 
 /md
+
+seed-admin.ts
+setup-akun-sheet.ts

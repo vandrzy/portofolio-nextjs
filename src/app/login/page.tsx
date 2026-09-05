@@ -1,16 +1,43 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login submission logic here when backend API is available
-    console.log("Login submitted:", { username, password });
+    setErrorMsg("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.message || "username atau password salah");
+      } else {
+        router.push("/admin");
+        router.refresh();
+      }
+    } catch {
+      setErrorMsg("Terjadi kesalahan koneksi. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -25,6 +52,13 @@ export default function LoginPage() {
             Masukkan username dan password Anda untuk masuk.
           </p>
         </div>
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs font-medium text-red-600 text-center">
+            {errorMsg}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -90,9 +124,10 @@ export default function LoginPage() {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl bg-[#026c99] hover:bg-[#02577c] text-white font-poppins font-semibold text-sm transition-all shadow-2xs cursor-pointer"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-xl bg-[#026c99] hover:bg-[#02577c] text-white font-poppins font-semibold text-sm transition-all shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Masuk
+              {isLoading ? "Memproses..." : "Masuk"}
             </button>
           </div>
         </form>
@@ -100,3 +135,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
