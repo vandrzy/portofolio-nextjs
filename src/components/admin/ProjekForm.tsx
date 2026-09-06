@@ -13,12 +13,14 @@ export interface ProjekData {
 interface ProjekFormProps {
   initialData?: ProjekData;
   isEdit?: boolean;
+  isSubmitting?: boolean;
   onSubmit: (data: ProjekData) => void;
 }
 
 export default function ProjekForm({
   initialData,
   isEdit = false,
+  isSubmitting = false,
   onSubmit,
 }: ProjekFormProps) {
   const [judul, setJudul] = useState(initialData?.judul || "");
@@ -60,7 +62,7 @@ export default function ProjekForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!judul.trim() || !deskripsi.trim()) return;
+    if (!judul.trim() || !deskripsi.trim() || isSubmitting) return;
     onSubmit({
       judul: judul.trim(),
       deskripsi: deskripsi.trim(),
@@ -156,7 +158,7 @@ export default function ProjekForm({
           <input
             id="tagInput"
             type="text"
-            disabled={tags.length >= 5}
+            disabled={tags.length >= 5 || isSubmitting}
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
@@ -170,7 +172,7 @@ export default function ProjekForm({
           <button
             type="button"
             onClick={handleAddTag}
-            disabled={tags.length >= 5 || !tagInput.trim()}
+            disabled={tags.length >= 5 || !tagInput.trim() || isSubmitting}
             className="px-5 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#202224] font-poppins font-medium text-sm transition-all cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Tambah
@@ -189,7 +191,8 @@ export default function ProjekForm({
                 <button
                   type="button"
                   onClick={() => handleRemoveTag(index)}
-                  className="hover:bg-[#026c99]/20 p-0.5 rounded-full text-[#026c99] transition-colors cursor-pointer"
+                  disabled={isSubmitting}
+                  className="hover:bg-[#026c99]/20 p-0.5 rounded-full text-[#026c99] transition-colors cursor-pointer disabled:opacity-50"
                   title="Hapus tag"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,11 +215,17 @@ export default function ProjekForm({
         </Link>
         <button
           type="submit"
-          className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#026c99] hover:bg-[#02577c] text-white font-poppins font-medium text-sm transition-all shadow-2xs cursor-pointer"
+          disabled={isSubmitting}
+          className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#026c99] hover:bg-[#02577c] text-white font-poppins font-medium text-sm transition-all shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isEdit ? "Simpan Perubahan" : "Simpan"}
+          {isSubmitting
+            ? "Menyimpan..."
+            : isEdit
+            ? "Simpan Perubahan"
+            : "Simpan"}
         </button>
       </div>
     </form>
   );
 }
+

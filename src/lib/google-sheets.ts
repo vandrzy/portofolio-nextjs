@@ -69,3 +69,21 @@ export async function getTeknologiSheet() {
   return sheet;
 }
 
+/**
+ * Mendapatkan sheet 'projek'. Jika belum ada, sheet akan dibuat secara otomatis dengan header yang sesuai.
+ */
+export async function getProjekSheet() {
+  const doc = await getGoogleSheetsDoc();
+  await doc.loadInfo();
+
+  let sheet = doc.sheetsByTitle['projek'];
+  if (!sheet) {
+    sheet = await doc.addSheet({
+      title: 'projek',
+      headerValues: ['id', 'shortCode', 'judul', 'deskripsi', 'link', 'tags', 'tanggal update'],
+    });
+  }
+  return sheet;
+}
+
+
