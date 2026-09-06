@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getTeknologiSheet } from "@/lib/google-sheets";
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 async function getTeknologiList(): Promise<string[]> {
   const fallbackSkills = [

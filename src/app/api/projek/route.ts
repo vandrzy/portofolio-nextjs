@@ -1,77 +1,11 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
-import { cookies } from 'next/headers';
 import { getProjekSheet } from '@/lib/google-sheets';
 import { generateShortCode } from '@/lib/hash';
-
-interface JwtPayload {
-  username: string;
-}
-
-/**
- * Helper untuk verifikasi token JWT dari Header Authorization atau Cookie
- */
-async function verifyJwtToken(request: Request): Promise<{ valid: boolean; errorResponse?: NextResponse }> {
-  let token: string | null = null;
-  const authHeader = request.headers.get('authorization');
-
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7);
-  } else {
-    const cookieStore = await cookies();
-    token = cookieStore.get('admin_token')?.value || null;
-  }
-
-  if (!token) {
-    return {
-      valid: false,
-      errorResponse: NextResponse.json(
-        { message: 'Unauthorized. Token JWT tidak ditemukan, silakan login terlebih dahulu.' },
-        { status: 401 }
-      ),
-    };
-  }
-
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
-    return {
-      valid: false,
-      errorResponse: NextResponse.json(
-        { message: 'JWT_SECRET belum dikonfigurasi pada environment variable.' },
-        { status: 500 }
-      ),
-    };
-  }
-
-  try {
-    jwt.verify(token, jwtSecret) as JwtPayload;
-    return { valid: true };
-  } catch {
-    return {
-      valid: false,
-      errorResponse: NextResponse.json(
-        { message: 'Token tidak valid atau telah kadaluarsa. Silakan login kembali.' },
-        { status: 401 }
-      ),
-    };
-  }
-}
-
-/**
- * Helper untuk mem-parsing data tags dari Google Sheet (format JSON string atau array)
- */
-function parseTags(rawTags: string | undefined | null): string[] {
-  if (!rawTags) return [];
-  try {
-    const parsed = JSON.parse(rawTags);
-    if (Array.isArray(parsed)) return parsed.map(String);
-  } catch {
-    // Fallback jika berupa koma-separated string
-    return rawTags.split(',').map((t) => t.trim()).filter(Boolean);
-  }
-  return [];
-}
+import { verifyJwtToken } from '@/lib/auth';
+import { successResponse, errorResponse } from '@/lib/api-response';
+import { parseTags } from '@/lib/utils';
+import { projekSchema } from '@/lib/validations';
 
 /**
  * GET /api/projek
@@ -81,7 +15,11 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const judulQuery = searchParams.get('judul')?.trim() || '';
-    const shortCodeQuery = searchParams.get('shortcode') || searchParams.get('shortCode') || searchParams.get('id') || '';
+    const shortCodeQuery =
+      searchParams.get('shortcode') ||
+      searchParams.get('shortCode') ||
+      searchParams.get('id') ||
+      '';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limitParam = searchParams.get('limit');
 
@@ -100,7 +38,9 @@ export async function GET(request: Request) {
 
     // Filter berdasarkan shortcode jika ada
     if (shortCodeQuery) {
-      data = data.filter((item) => item.shortCode === shortCodeQuery || item.id === shortCodeQuery);
+      data = data.filter(
+        (item) => item.shortCode === shortCodeQuery || item.id === shortCodeQuery
+      );
     }
 
     // Filter berdasarkan judul jika ada
@@ -119,9 +59,7 @@ export async function GET(request: Request) {
       const startIndex = (page - 1) * limit;
       const paginatedData = data.slice(startIndex, startIndex + limit);
 
-      return NextResponse.json({
-        success: true,
-        data: paginatedData,
+      return successResponse(paginatedData, undefined, 200, {
         total,
         page,
         totalPages,
@@ -129,17 +67,11 @@ export async function GET(request: Request) {
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      data,
-      total,
-    });
+    return successResponse(data, undefined, 200, { total });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json(
-      { message: 'Gagal mengambil data projek', error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : 'Internal Server Error';
+    return errorResponse('Gagal mengambil data projek', 500, errorMessage);
   }
 }
 
@@ -154,46 +86,14 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const judul = body.judul?.trim();
-    const deskripsi = body.deskripsi?.trim();
-    const link = body.link?.trim() || '';
-    const tags = Array.isArray(body.tags) ? body.tags : [];
+    const validation = projekSchema.safeParse(body);
 
-    if (!judul) {
-      return NextResponse.json(
-        { message: 'Judul projek wajib diisi' },
-        { status: 400 }
-      );
+    if (!validation.success) {
+      const firstError = validation.error.issues[0]?.message || 'Data input tidak valid';
+      return errorResponse(firstError, 400, validation.error.format());
     }
 
-    if (judul.length > 35) {
-      return NextResponse.json(
-        { message: 'Judul projek maksimal 35 karakter' },
-        { status: 400 }
-      );
-    }
-
-    if (!deskripsi) {
-      return NextResponse.json(
-        { message: 'Deskripsi projek wajib diisi' },
-        { status: 400 }
-      );
-    }
-
-    if (deskripsi.length > 130) {
-      return NextResponse.json(
-        { message: 'Deskripsi projek maksimal 130 karakter' },
-        { status: 400 }
-      );
-    }
-
-    if (tags.length > 5) {
-      return NextResponse.json(
-        { message: 'Tags projek maksimal 5 tag' },
-        { status: 400 }
-      );
-    }
-
+    const { judul, deskripsi, link, tags } = validation.data;
     const id = crypto.randomUUID();
     const shortCode = generateShortCode(id);
     const tanggalUpdate = new Date().toISOString();
@@ -209,27 +109,23 @@ export async function POST(request: Request) {
       'tanggal update': tanggalUpdate,
     });
 
-    return NextResponse.json(
+    return successResponse(
       {
-        message: 'Projek berhasil ditambahkan',
-        data: {
-          id,
-          shortCode,
-          judul,
-          deskripsi,
-          link,
-          tags,
-          tanggalUpdate,
-        },
+        id,
+        shortCode,
+        judul,
+        deskripsi,
+        link,
+        tags,
+        tanggalUpdate,
       },
-      { status: 201 }
+      'Projek berhasil ditambahkan',
+      201
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json(
-      { message: 'Gagal menambah data projek', error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : 'Internal Server Error';
+    return errorResponse('Gagal menambah data projek', 500, errorMessage);
   }
 }
 
@@ -245,69 +141,39 @@ async function handleUpdate(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const queryShortCode = searchParams.get('shortcode') || searchParams.get('shortCode') || searchParams.get('id');
+    const queryShortCode =
+      searchParams.get('shortcode') ||
+      searchParams.get('shortCode') ||
+      searchParams.get('id');
 
     const body = await request.json();
-    const judul = body.judul?.trim();
-    const deskripsi = body.deskripsi?.trim();
-    const link = body.link?.trim() || '';
-    const tags = Array.isArray(body.tags) ? body.tags : [];
-
-    const shortCodeTarget = body.shortCode || body.shortcode || body.id || queryShortCode;
+    const shortCodeTarget =
+      body.shortCode || body.shortcode || body.id || queryShortCode;
 
     if (!shortCodeTarget) {
-      return NextResponse.json(
-        { message: 'Identifier (shortCode / id) projek wajib disertakan' },
-        { status: 400 }
+      return errorResponse(
+        'Identifier (shortCode / id) projek wajib disertakan',
+        400
       );
     }
 
-    if (!judul) {
-      return NextResponse.json(
-        { message: 'Judul projek wajib diisi' },
-        { status: 400 }
-      );
+    const validation = projekSchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0]?.message || 'Data input tidak valid';
+      return errorResponse(firstError, 400, validation.error.format());
     }
 
-    if (judul.length > 35) {
-      return NextResponse.json(
-        { message: 'Judul projek maksimal 35 karakter' },
-        { status: 400 }
-      );
-    }
-
-    if (!deskripsi) {
-      return NextResponse.json(
-        { message: 'Deskripsi projek wajib diisi' },
-        { status: 400 }
-      );
-    }
-
-    if (deskripsi.length > 130) {
-      return NextResponse.json(
-        { message: 'Deskripsi projek maksimal 130 karakter' },
-        { status: 400 }
-      );
-    }
-
-    if (tags.length > 5) {
-      return NextResponse.json(
-        { message: 'Tags projek maksimal 5 tag' },
-        { status: 400 }
-      );
-    }
+    const { judul, deskripsi, link, tags } = validation.data;
 
     const sheet = await getProjekSheet();
     const rows = await sheet.getRows();
     const targetRow = rows.find(
-      (row) => row.get('shortCode') === shortCodeTarget || row.get('id') === shortCodeTarget
+      (row) =>
+        row.get('shortCode') === shortCodeTarget || row.get('id') === shortCodeTarget
     );
 
     if (!targetRow) {
-      return NextResponse.json(
-        { message: 'Data projek tidak ditemukan' },
-        { status: 404 }
-      );
+      return errorResponse('Data projek tidak ditemukan', 404);
     }
 
     const tanggalUpdate = new Date().toISOString();
@@ -318,9 +184,8 @@ async function handleUpdate(request: Request) {
     targetRow.set('tanggal update', tanggalUpdate);
     await targetRow.save();
 
-    return NextResponse.json({
-      message: 'Projek berhasil diperbarui',
-      data: {
+    return successResponse(
+      {
         id: targetRow.get('id'),
         shortCode: targetRow.get('shortCode'),
         judul,
@@ -329,13 +194,12 @@ async function handleUpdate(request: Request) {
         tags,
         tanggalUpdate,
       },
-    });
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json(
-      { message: 'Gagal memperbarui data projek', error: errorMessage },
-      { status: 500 }
+      'Projek berhasil diperbarui'
     );
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Internal Server Error';
+    return errorResponse('Gagal memperbarui data projek', 500, errorMessage);
   }
 }
 
@@ -358,38 +222,38 @@ export async function DELETE(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const shortCodeTarget = searchParams.get('shortcode') || searchParams.get('shortCode') || searchParams.get('id');
+    const shortCodeTarget =
+      searchParams.get('shortcode') ||
+      searchParams.get('shortCode') ||
+      searchParams.get('id');
 
     if (!shortCodeTarget) {
-      return NextResponse.json(
-        { message: 'Query parameter shortcode wajib disertakan' },
-        { status: 400 }
+      return errorResponse(
+        'Query parameter shortcode wajib disertakan',
+        400
       );
     }
 
     const sheet = await getProjekSheet();
     const rows = await sheet.getRows();
     const targetRow = rows.find(
-      (row) => row.get('shortCode') === shortCodeTarget || row.get('id') === shortCodeTarget
+      (row) =>
+        row.get('shortCode') === shortCodeTarget || row.get('id') === shortCodeTarget
     );
 
     if (!targetRow) {
-      return NextResponse.json(
-        { message: 'Data projek tidak ditemukan' },
-        { status: 404 }
-      );
+      return errorResponse('Data projek tidak ditemukan', 404);
     }
 
     await targetRow.delete();
 
     return NextResponse.json({
+      success: true,
       message: 'Projek berhasil dihapus',
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-    return NextResponse.json(
-      { message: 'Gagal menghapus data projek', error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : 'Internal Server Error';
+    return errorResponse('Gagal menghapus data projek', 500, errorMessage);
   }
 }
