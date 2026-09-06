@@ -7,7 +7,7 @@ export default function Footer() {
         </p>
         <div className="flex items-center gap-3">
           <a
-            href="mailto:contact@example.com"
+            href="mailto:vandyrizky33@gmail.com"
             aria-label="Email"
             className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-full text-gray-500 hover:text-[#026c99] hover:border-[#026c99] transition-colors"
           >
@@ -16,7 +16,7 @@ export default function Footer() {
             </svg>
           </a>
           <a
-            href="https://github.com"
+            href="https://github.com/vandrzy"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub"

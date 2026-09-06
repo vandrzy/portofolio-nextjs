@@ -55,7 +55,7 @@ async function getProjekList(): Promise<ProjectItem[]> {
     const sheet = await getProjekSheet();
     const rows = await sheet.getRows();
 
-    const projects: ProjectItem[] = rows.map((row) => {
+    const projects: { item: ProjectItem; time: number }[] = rows.map((row) => {
       const rawTags = row.get("tags");
       let parsedTags: string[] = [];
       if (rawTags) {
@@ -67,17 +67,27 @@ async function getProjekList(): Promise<ProjectItem[]> {
         }
       }
 
+      const tanggalUpdate = row.get("tanggal update") || "";
+      const time = Date.parse(tanggalUpdate) || 0;
+
       return {
-        id: row.get("id") || "",
-        shortCode: row.get("shortCode") || "",
-        judul: row.get("judul") || "",
-        deskripsi: row.get("deskripsi") || "",
-        link: row.get("link") || "#",
-        tags: parsedTags,
+        item: {
+          id: row.get("id") || "",
+          shortCode: row.get("shortCode") || "",
+          judul: row.get("judul") || "",
+          deskripsi: row.get("deskripsi") || "",
+          link: row.get("link") || "#",
+          tags: parsedTags,
+        },
+        time,
       };
     });
 
-    return projects.length > 0 ? projects : FALLBACK_PROJECTS;
+    projects.reverse();
+    projects.sort((a, b) => b.time - a.time);
+
+    const sortedList = projects.map((p) => p.item);
+    return sortedList.length > 0 ? sortedList : FALLBACK_PROJECTS;
   } catch (error) {
     console.error("Gagal mengambil data projek dari Google Sheets:", error);
     return FALLBACK_PROJECTS;

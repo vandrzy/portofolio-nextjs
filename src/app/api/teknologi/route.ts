@@ -29,6 +29,14 @@ export async function GET(request: Request) {
       tanggalUpdate: row.get('tanggal update') || '',
     }));
 
+    // Urutkan data agar data terbaru berada di paling atas
+    data.reverse();
+    data.sort((a, b) => {
+      const timeA = Date.parse(a.tanggalUpdate) || 0;
+      const timeB = Date.parse(b.tanggalUpdate) || 0;
+      return timeB - timeA;
+    });
+
     // Filter berdasarkan shortcode jika ada
     if (shortCodeQuery) {
       data = data.filter(

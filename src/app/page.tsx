@@ -19,7 +19,11 @@ async function getTeknologiList(): Promise<string[]> {
   try {
     const sheet = await getTeknologiSheet();
     const rows = await sheet.getRows();
-    const items = rows.map((row) => row.get("nama") as string).filter(Boolean);
+    const items = rows
+      .slice()
+      .reverse()
+      .map((row) => row.get("nama") as string)
+      .filter(Boolean);
     return items.length > 0 ? items : fallbackSkills;
   } catch (error) {
     console.error("Gagal mengambil data teknologi untuk beranda:", error);
@@ -44,7 +48,7 @@ export default async function Home() {
             </h1>
           </div>
           <p className="text-lg text-[#575757] max-w-xl font-inter leading-relaxed">
-            Full-Stack Developer &amp; UI/UX Enthusiast. Spesialisasi dalam pengembangan web modern, aplikasi terintegrasi, dan antarmuka web yang responsif.
+            Junior Full-Stack Developer & UI/UX Enthusiast. Suka membangun aplikasi web modern, mengeksplorasi teknologi baru,
           </p>
           <div className="pt-2">
             <Link
@@ -91,7 +95,7 @@ export default async function Home() {
             Keahlian &amp; Teknologi
           </h2>
           <p className="text-sm text-[#575757]">
-            Teknologi yang biasa saya gunakan dalam membangun aplikasi web.
+            Teknologi yang biasa saya gunakan.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
