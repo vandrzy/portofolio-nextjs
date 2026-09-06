@@ -51,3 +51,21 @@ export async function testGoogleSheetsConnection() {
     };
   }
 }
+
+/**
+ * Mendapatkan sheet 'teknologi'. Jika belum ada, sheet akan dibuat secara otomatis dengan header yang sesuai.
+ */
+export async function getTeknologiSheet() {
+  const doc = await getGoogleSheetsDoc();
+  await doc.loadInfo();
+
+  let sheet = doc.sheetsByTitle['teknologi'];
+  if (!sheet) {
+    sheet = await doc.addSheet({
+      title: 'teknologi',
+      headerValues: ['id', 'shortCode', 'nama', 'tanggal update'],
+    });
+  }
+  return sheet;
+}
+

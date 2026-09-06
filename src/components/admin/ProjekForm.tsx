@@ -38,6 +38,7 @@ export default function ProjekForm({
 
   const handleAddTag = (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e) e.preventDefault();
+    if (tags.length >= 5) return;
     const trimmedTag = tagInput.trim();
     if (!trimmedTag) return;
     if (!tags.some((t) => t.toLowerCase() === trimmedTag.toLowerCase())) {
@@ -140,26 +141,37 @@ export default function ProjekForm({
 
       {/* Form Tag (Sistem Input Dinamis) */}
       <div className="space-y-2">
-        <label
-          htmlFor="tagInput"
-          className="block text-xs font-semibold font-poppins text-[#202224]"
-        >
-          Tag Projek
-        </label>
+        <div className="flex items-center justify-between">
+          <label
+            htmlFor="tagInput"
+            className="block text-xs font-semibold font-poppins text-[#202224]"
+          >
+            Tag Projek
+          </label>
+          <span className="text-[11px] text-gray-400 font-inter">
+            {tags.length}/5 tag
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           <input
             id="tagInput"
             type="text"
+            disabled={tags.length >= 5}
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
-            placeholder="Ketik nama tag (misal: Next.js, Tailwind)..."
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-[#026c99] text-sm text-[#202224] placeholder-gray-400 transition-colors bg-white"
+            placeholder={
+              tags.length >= 5
+                ? "Maksimal 5 tag telah tercapai"
+                : "Ketik nama tag (misal: Next.js, Tailwind)..."
+            }
+            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-[#026c99] text-sm text-[#202224] placeholder-gray-400 transition-colors bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           <button
             type="button"
             onClick={handleAddTag}
-            className="px-5 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#202224] font-poppins font-medium text-sm transition-all cursor-pointer shrink-0"
+            disabled={tags.length >= 5 || !tagInput.trim()}
+            className="px-5 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#202224] font-poppins font-medium text-sm transition-all cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Tambah
           </button>

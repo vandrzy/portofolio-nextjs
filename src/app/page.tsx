@@ -1,8 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
+import { getTeknologiSheet } from "@/lib/google-sheets";
 
-export default function Home() {
-  const skills = [
+export const revalidate = 0;
+
+async function getTeknologiList(): Promise<string[]> {
+  const fallbackSkills = [
     "Next.js",
     "React",
     "TypeScript",
@@ -12,6 +15,20 @@ export default function Home() {
     "REST API",
     "Git",
   ];
+
+  try {
+    const sheet = await getTeknologiSheet();
+    const rows = await sheet.getRows();
+    const items = rows.map((row) => row.get("nama") as string).filter(Boolean);
+    return items.length > 0 ? items : fallbackSkills;
+  } catch (error) {
+    console.error("Gagal mengambil data teknologi untuk beranda:", error);
+    return fallbackSkills;
+  }
+}
+
+export default async function Home() {
+  const skills = await getTeknologiList();
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 space-y-16">

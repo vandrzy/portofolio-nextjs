@@ -1,17 +1,41 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import TeknologiForm from "@/components/admin/TeknologiForm";
 
 export default function TambahTeknologiPage() {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubmit = (nama: string) => {
-    // UI Mock Handler - ready for API integration (e.g. POST /api/teknologi)
-    console.log("Menambahkan teknologi baru:", { nama });
-    alert(`Teknologi "${nama}" berhasil disimpan!`);
-    router.push("/admin/teknologi");
+  const handleSubmit = async (nama: string) => {
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch("/api/teknologi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ nama }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal menyimpan data teknologi");
+      }
+
+      router.push("/admin/teknologi");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Terjadi kesalahan";
+      setErrorMsg(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -45,9 +69,15 @@ export default function TambahTeknologiPage() {
         </p>
       </div>
 
+      {errorMsg && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl font-poppins">
+          {errorMsg}
+        </div>
+      )}
+
       {/* Form Card Container */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 shadow-xs">
-        <TeknologiForm onSubmit={handleSubmit} />
+        <TeknologiForm isSubmitting={isSubmitting} onSubmit={handleSubmit} />
       </div>
     </div>
   );

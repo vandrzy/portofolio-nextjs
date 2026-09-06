@@ -1,60 +1,112 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Pagination from "@/components/admin/Pagination";
 import DeleteConfirmModal from "@/components/admin/DeleteConfirmModal";
 
 interface Technology {
   id: string;
+  shortCode: string;
   nama: string;
-  updatedAt: string;
+  tanggalUpdate: string;
 }
 
-// Initial Mock Data
-const INITIAL_TECHNOLOGIES: Technology[] = [
-  { id: "1", nama: "Next.js", updatedAt: "2026-09-01" },
-  { id: "2", nama: "React.js", updatedAt: "2026-08-28" },
-  { id: "3", nama: "TypeScript", updatedAt: "2026-08-25" },
-  { id: "4", nama: "Tailwind CSS", updatedAt: "2026-08-20" },
-  { id: "5", nama: "Node.js", updatedAt: "2026-08-15" },
-  { id: "6", nama: "PostgreSQL", updatedAt: "2026-08-10" },
-  { id: "7", nama: "Docker", updatedAt: "2026-08-05" },
-  { id: "8", nama: "GraphQL", updatedAt: "2026-08-01" },
-];
-
 export default function AdminTeknologiPage() {
-  const [technologies, setTechnologies] = useState<Technology[]>(INITIAL_TECHNOLOGIES);
+  const [technologies, setTechnologies] = useState<Technology[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Technology | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const itemsPerPage = 5;
 
-  // Filter data based on search term (search by nama)
-  const filteredData = technologies.filter((item) =>
-    item.nama.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchTechnologies = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+      if (searchTerm.trim()) {
+        queryParams.set("nama", searchTerm.trim());
+      }
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+      const res = await fetch(`/api/teknologi?${queryParams.toString()}`);
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        setTechnologies(result.data || []);
+        setTotalPages(result.totalPages || 1);
+        setTotalItems(result.total || 0);
+      } else {
+        throw new Error(result.message || "Gagal mengambil data teknologi");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat memuat data";
+      setErrorMsg(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, searchTerm, itemsPerPage]);
+
+  useEffect(() => {
+    fetchTechnologies();
+  }, [fetchTechnologies]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1); // reset to page 1 on search
+    setCurrentPage(1);
   };
 
   const handleOpenDeleteModal = (item: Technology) => {
     setDeleteTarget(item);
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteTarget) {
-      setTechnologies((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    try {
+      const identifier = deleteTarget.shortCode || deleteTarget.id;
+      const res = await fetch(`/api/teknologi?shortcode=${encodeURIComponent(identifier)}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal menghapus teknologi");
+      }
+
       setDeleteTarget(null);
+      fetchTechnologies();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan";
+      alert(`Gagal menghapus: ${msg}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "-";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return dateStr;
     }
   };
 
@@ -82,6 +134,12 @@ export default function AdminTeknologiPage() {
           <span>Tambah Teknologi</span>
         </Link>
       </div>
+
+      {errorMsg && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl font-poppins">
+          {errorMsg}
+        </div>
+      )}
 
       {/* Card Wrapper */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-xs space-y-4">
@@ -123,20 +181,26 @@ export default function AdminTeknologiPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-inter">
-              {paginatedData.length > 0 ? (
-                paginatedData.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={3} className="px-5 py-8 text-center text-gray-400 font-poppins text-sm">
+                    Memuat data teknologi...
+                  </td>
+                </tr>
+              ) : technologies.length > 0 ? (
+                technologies.map((item) => (
+                  <tr key={item.id || item.shortCode} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-4 font-semibold text-[#202224] whitespace-nowrap">
                       {item.nama}
                     </td>
                     <td className="px-5 py-4 whitespace-nowrap text-xs text-gray-500">
-                      {item.updatedAt}
+                      {formatDate(item.tanggalUpdate)}
                     </td>
                     <td className="px-5 py-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         {/* Edit Button */}
                         <Link
-                          href={`/admin/teknologi/edit/${item.id}`}
+                          href={`/admin/teknologi/edit/${item.shortCode || item.id}`}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-[#202224] hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer"
                         >
                           <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,13 +234,15 @@ export default function AdminTeknologiPage() {
         </div>
 
         {/* Pagination Component */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredData.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={(page) => setCurrentPage(page)}
-        />
+        {!isLoading && totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
 
       {/* Modal Konfirmasi Hapus */}
